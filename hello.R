@@ -6,6 +6,7 @@ setwd("C:/Users/despina/Google Drive/ricerca/myprojects/myrepo1")
 
 #import data 1995-2007
 require(data.table)
+require(dplyr)
 data <- as.data.frame(fread("sbs_r_nuts03.tsv", na.strings=":"))
 #split first variable
 
@@ -108,22 +109,68 @@ final0817$id  <- paste(final0817$nace_r1,final0817$indic_sb,final0817$geo)
 #######MISSING VALUE ANALYSIS
 library(naniar)
 library(stringr)
-
+library(tidyr)
 #make it long from wide
-long_9507 <- final9507 %>% gather(Year, Value, -nace_r1, -indic_sb, -geo)
+long_9507 <- final9507 %>% gather(Year, Value, -nace_r1, -indic_sb, -geo, -id)
 
 #create variable for country
 long_9507$country <- substr(long_9507$geo, 0, 2)
 
-library(VIM)
-mice_plot <- aggr(final9507, col=c('navyblue','yellow'),
-                    numbers=TRUE, sortVars=TRUE,
-                    labels=names(final9507), cex.axis=.7,
-                    gap=3, ylab=c("Missing data","Pattern"))
 
-mice_plot <- aggr(final0817, col=c('navyblue','yellow'),
-                  numbers=TRUE, sortVars=TRUE,
-                  labels=names(final0817), cex.axis=.7,
-                  gap=3, ylab=c("Missing data","Pattern"))
+year <- aggregate(Value ~ Year, data=long_9507, function(x) {sum(is.na(x))}, na.action = NULL)
+yearsum <- aggregate(Value ~ Year, data=long_9507, function(x) {sum(!is.na(x))}, na.action = NULL)
+pernayear<-year$Value/(year$Value+yearsum$Value)
+year$percentace<-pernayear
 
+
+
+country <- aggregate(Value ~ country, data=long_9507, function(x) {sum(is.na(x))}, na.action = NULL)
+countrysum <- aggregate(Value ~ country, data=long_9507, function(x) {sum(!is.na(x))}, na.action = NULL)
+pernacountry<-country$Value/(country$Value+countrysum$Value)
+country$percentage<-pernacountry
+
+countryyear <- aggregate(Value ~ country+Year, data=long_9507, function(x) {sum(is.na(x))}, na.action = NULL)
+countryyearsum <- aggregate(Value ~ country+Year, data=long_9507, function(x) {sum(!is.na(x))}, na.action = NULL)
+pernacountryyear<-countryyear$Value/(countryyear$Value+countryyearsum$Value)
+countryyear$percentage<-pernacountryyear
+
+countryyear<-countryyear[,-3]
+NA9507 <- spread(countryyear, Year, percentage)
+NA9507 <- countryyear
+#make a tabel for latex
+library(xtable)
+xtable(NA9507)
+
+#the same for the second
+
+
+long_0817 <- final0817 %>% gather(Year, Value, -nace_r2, -indic_sb, -geo, -id)
+
+#create variable for country
+long_0817$country <- substr(long_0817$geo, 0, 2)
+
+
+year <- aggregate(Value ~ Year, data=long_0817, function(x) {sum(is.na(x))}, na.action = NULL)
+yearsum <- aggregate(Value ~ Year, data=long_0817, function(x) {sum(!is.na(x))}, na.action = NULL)
+pernayear<-year$Value/(year$Value+yearsum$Value)
+year$percentace<-pernayear
+
+
+
+country <- aggregate(Value ~ country, data=long_0817, function(x) {sum(is.na(x))}, na.action = NULL)
+countrysum <- aggregate(Value ~ country, data=long_0817, function(x) {sum(!is.na(x))}, na.action = NULL)
+pernacountry<-country$Value/(country$Value+countrysum$Value)
+country$percentage<-pernacountry
+
+countryyear <- aggregate(Value ~ country+Year, data=long_0817, function(x) {sum(is.na(x))}, na.action = NULL)
+countryyearsum <- aggregate(Value ~ country+Year, data=long_0817, function(x) {sum(!is.na(x))}, na.action = NULL)
+pernacountryyear<-countryyear$Value/(countryyear$Value+countryyearsum$Value)
+countryyear$percentage<-pernacountryyear
+
+countryyear<-countryyear[,-3]
+NA0817 <- spread(countryyear, Year, percentage)
+NA0817 <- countryyear
+#make a tabel for latex
+library(xtable)
+xtable(NA0817)
 
