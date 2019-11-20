@@ -1,15 +1,18 @@
 
 install.packages("data.table")
+install.packages("naniar")
 install.packages("VIM")
 setwd("C:/Users/despina/Google Drive/ricerca/myprojects/myrepo1")
 
 #import data 1995-2007
 require(data.table)
-data <- as.data.frame(fread("sbs_r_nuts03.tsv"))
+data <- as.data.frame(fread("sbs_r_nuts03.tsv", na.strings=":"))
 #split first variable
 
-data1 <- setDT(data)[,paste0("A1", 1:3) := tstrsplit(V1, ",")][,-"V1", with=F]
-data1[1,16] <-"geo"
+
+
+data1 <- setDT(data)[,paste0("A1", 1:3) := tstrsplit(V1, ",")][,-"V1", with = F]
+data1[1,16] <- "geo"
 #first row became colnames
 colnames(data1) <- as.character(unlist(data1[1,]))
 #remove first colum
@@ -32,13 +35,32 @@ data3 <- replace(data3, data3 == "V91290", "Empl. Growth")
 data3 <- replace(data3, data3 == "V94310", "Manufacturing")
 data3 <- replace(data3, data3 == "V94414", "Investment PP")
 
-final9507 <- data3
+
+
+
+data3 <- na_if(data3, ":")
+data3 <- na_if(data3, ": c")
+data3 <- na_if(data3, ": cd")
+data3 <- na_if(data3, ": d")
+data3 <- na_if(data3, ": u")
+data3 <- na_if(data3, ": b")
+data3 <- na_if(data3, ": be")
+data3 <- na_if(data3, ": bc")
+
+data4<- as.data.frame(apply(data3[,1:13], 2, function(y) as.numeric(gsub("p", "", y))))
+data4<- as.data.frame(apply(data4[,1:13], 2, function(y) as.numeric(gsub("b", "", y))))
+data4<- as.data.frame(apply(data4[,1:13], 2, function(y) as.numeric(gsub("be", "", y))))
+
+final9507 <- cbind(data4, data3[,14:16])
+
 final9507$id  <- paste(final9507$nace_r1,final9507$indic_sb,final9507$geo)
 
 #download data 2008-2017
 
-data <- as.data.frame(fread("sbs_r_nuts06_r2.tsv"))
+data <- as.data.frame(fread("sbs_r_nuts06_r2.tsv"), na.strings=": c")
 #split first variable
+data[72,3]
+data[29,11]
 
 data1 <- setDT(data)[,paste0("A1", 1:3) := tstrsplit(V1, ",")][,-"V1", with=F]
 data1[1,13] <-"geo"
@@ -64,17 +86,44 @@ data3 <- replace(data3, data3 == "V91290", "Empl. Growth")
 data3 <- replace(data3, data3 == "V94310", "Manufacturing")
 data3 <- replace(data3, data3 == "V94414", "Investment PP")
 
-final0817 <- data3
+
+
+data3 <- na_if(data3, ":")
+data3 <- na_if(data3, ": c")
+data3 <- na_if(data3, ": cd")
+data3 <- na_if(data3, ": d")
+data3 <- na_if(data3, ": u")
+data3 <- na_if(data3, ": b")
+data3 <- na_if(data3, ": be")
+data3 <- na_if(data3, ": bc")
+
+data4<- as.data.frame(apply(data3[,1:10], 2, function(y) as.numeric(gsub("p", "", y))))
+data4<- as.data.frame(apply(data4[,1:10], 2, function(y) as.numeric(gsub("b", "", y))))
+data4<- as.data.frame(apply(data4[,1:10], 2, function(y) as.numeric(gsub("be", "", y))))
+
+final0817 <- cbind(data4, data3[,11:13])
+
 final0817$id  <- paste(final0817$nace_r1,final0817$indic_sb,final0817$geo)
 
 #######MISSING VALUE ANALYSIS
+library(naniar)
+library(stringr)
 
-final9507<-ifelse(final9507==":", NA, final9507)
+#make it long from wide
+long_9507 <- final9507 %>% gather(Year, Value, -nace_r1, -indic_sb, -geo)
+
+#create variable for country
+long_9507$country <- substr(long_9507$geo, 0, 2)
 
 library(VIM)
 mice_plot <- aggr(final9507, col=c('navyblue','yellow'),
                     numbers=TRUE, sortVars=TRUE,
                     labels=names(final9507), cex.axis=.7,
                     gap=3, ylab=c("Missing data","Pattern"))
+
+mice_plot <- aggr(final0817, col=c('navyblue','yellow'),
+                  numbers=TRUE, sortVars=TRUE,
+                  labels=names(final0817), cex.axis=.7,
+                  gap=3, ylab=c("Missing data","Pattern"))
 
 
